@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Fleet: Elemental Strike</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e272e;
+            color: #d2dae2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        h1 { color: #ff9f43; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 5px;}
+        
+        #game-container {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            align-items: flex-start;
+        }
+
+        /* KHU VỰC BÀN CỜ */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+            background-color: #485460;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .cell {
+            background-color: #0fbcf9;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        /* CÁC TRẠNG THÁI Ô CỜ */
+        .cell.preview-valid { background-color: #2ecc71 !important; }
+        .cell.preview-invalid { background-color: #ea2027 !important; cursor: not-allowed; }
+        .cell.placed { background-color: #ffeaa7; border: 1px solid #ffb142; }
+        .cell.miss { background-color: #808e9b; cursor: not-allowed; opacity: 0.7; }
+        .cell.hit { background-color: #ff3f34; cursor: not-allowed; }
+        .cell.sunk { background-color: #ffc048; border: 2px solid #d35400; }
+        
+        /* Trạng thái quét Radar hệ Gió */
+        .cell.radar-detected { background-color: #a29bfe !important; border: 1px dashed #6c5ce7; }
+
+        /* KHU VỰC ĐIỀU KHIỂN BÊN PHẢI */
+        #control-panel {
+            background-color: #2f3542;
+            padding: 20px;
+            border-radius: 8px;
+            width: 280px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .panel-title { font-size: 1.2rem; font-weight: bold; color: #ff9f43; margin-bottom: 15px; border-bottom: 1px solid #57606f; padding-bottom: 5px; }
+        
+        .dragon-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background-color: #747d8c;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.5;
+        }
+        .dragon-item.active { opacity: 1; background-color: #ff9f43; color: #1e272e; font-weight: bold; }
+        .dragon-item.placed { opacity: 1; background-color: #2ed573; color: white; text-decoration: line-through; }
+
+        /* HỆ THỐNG NÚT BẤM KỸ NĂNG */
+        .skill-container {
+            margin-top: 15px;
+            display: none; /* Chỉ hiện khi vào trận */
+        }
+        .skill-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: left;
+            background-color: #57606f;
+            color: white;
+        }
+        .skill-btn.selected {
+            border-color: #fff200;
+            background-color: #ffa502;
+            color: #1e272e;
+        }
+        .skill-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        button.action-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #10ac84;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button.action-btn:hover { background-color: #1dd1a1; }
+        button#btn-rotate { background-color: #5f27cd; }
+
+        #status-text { margin-top: 25px; font-size: 1.4rem; font-weight: bold; text-align: center; min-height: 35px; }
+    </style>
+</head>
+<body>
+
+    <h1>DRAGON FLEET</h1>
+    <div id="status-text">Giai đoạn: Sắp xếp quân bài chiến lược</div>
+
+    <div id="game-container">
+        <div id="game-board"></div>
+
+        <div id="control-panel">
+            <div class="panel-title">HẠM ĐỘI CỦA BẠN</div>
+            <div id="dragon-list"></div>
+            
+            <button id="btn-rotate" class="action-btn">🔄 Xoay Rồng: NGANG</button>
+            <button id="btn-start" class="action-btn" style="display: none; background-color: #ff4757;">🚀 BẮT ĐẦU CHIẾN ĐẤU</button>
+
+            <div id="skill-panel" class="skill-container">
+                <div class="panel-title" style="margin-top: 15px;">CHỌN VŨ KHÍ</div>
+                <button id="skill-normal" class="skill-btn selected">🎯 Đạn Thường (Vô hạn)</button>
+                <button id="skill-fire" class="skill-btn">🔥 Hệ Lửa: Chữ Thập (SL: 1)</button>
+                <button id="skill-wind" class="skill-btn">🌪️ Hệ Gió: Quét Radar 3x3 (SL: 1)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const boardSize = 10;
+        const gridElement = document.getElementById('game-board');
+        const statusText = document.getElementById('status-text');
+        const dragonListElement = document.getElementById('dragon-list');
+        const btnRotate = document.getElementById('btn-rotate');
+        const btnStart = document.getElementById('btn-start');
+        const skillPanel = document.getElementById('skill-panel');
+
+        let gameState = 'SETUP'; 
+        let isHorizontal = true; 
+        let currentDragonIndex = 0; 
+        let activeSkill = 'NORMAL'; // Vũ khí đang chọn: 'NORMAL', 'FIRE', 'WIND'
+
+        // Số lượng giới hạn của kỹ năng đặc biệt
+        let skillCharges = { FIRE: 1, WIND: 1 };
+
+        let fleet = [
+            { id: "divine", name: "Divine Dragon", size: 5, hits: 0, isPlaced: false },
+            { id: "supreme", name: "Supreme Dragon", size: 4, hits: 0, isPlaced: false },
+            { id: "epic_a", name: "Epic Dragon Alpha", size: 3, hits: 0, isPlaced: false },
+            { id: "epic_b", name: "Epic Dragon Beta", size: 3, hits: 0, isPlaced: false },
+            { id: "rare", name: "Rare Dragon", size: 2, hits: 0, isPlaced: false }
+        ];
+        let dragonsAlive = fleet.length;
+        let logicalBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+
+        function updateDragonListUI() {
+            dragonListElement.innerHTML = '';
+            fleet.forEach((dragon, index) => {
+                const item = document.createElement('div');
+                item.classList.add('dragon-item');
+                item.innerHTML = `<span>${dragon.name}</span> <span>${dragon.size} ô</span>`;
+                if (dragon.isPlaced) item.classList.add('placed');
+                else if (gameState === 'SETUP' && index === currentDragonIndex) item.classList.add('active');
+                dragonListElement.appendChild(item);
+            });
+        }
+
+        function createBoard() {
+            gridElement.innerHTML = '';
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.addEventListener('mouseenter', handleMouseEnter);
+                    cell.addEventListener('mouseleave', handleMouseLeave);
+                    cell.addEventListener('click', handleCellClick);
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        function getDragonPlacementCells(startRow, startCol, size) {
+            let cells = [];
+            for (let i = 0; i < size; i++) {
+                let r = isHorizontal ? startRow : startRow + i;
+                let c = isHorizontal ? startCol + i : startCol;
+                cells.push({ r, c });
+            }
+            return cells;
+        }
+
+        function isValidPlacement(cells) {
+            for (let cell of cells) {
+                if (cell.r >= boardSize || cell.c >= boardSize) return false;
+                if (logicalBoard[cell.r][cell.c] !== null) return false;
+            }
+            return true;
+        }
+
+        function handleMouseEnter(event) {
+            if (gameState !== 'SETUP' || currentDragonIndex >= fleet.length) return;
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            const dragon = fleet[currentDragonIndex];
+            const targetCells = getDragonPlacementCells(row, col, dragon.size);
+            const valid = isValidPlacement(targetCells);
+
+            targetCells.forEach(cell => {
+                if (cell.r < boardSize && cell.c < boardSize) {
+                    const domCell = document.querySelector(`.cell[data-row='${cell.r}'][data-col='${cell.c}']`);
+                    if (domCell) domCell.classList.add(valid ? 'preview-valid' : 'preview-invalid');
+                }
+            });
+        }
+
+        function handleMouseLeave() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('preview-valid', 'preview-invalid');
+            });
+        }
+
+        // 🎯 LOGIC TẤN CÔNG ĐƠN Ô (DÙNG CHUNG CHO CÁC KỸ NĂNG)
+        function fireAtCell(row, col) {
+            if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) return;
+            const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+            if (!cell || cell.classList.contains('hit') || cell.classList.contains('miss') || cell.classList.contains('sunk')) return;
+
+            const targetId = logicalBoard[row][col];
+            if (targetId !== null) {
+                cell.classList.add('hit');
+                const dragon = fleet.find(d => d.id === targetId);
+                dragon.hits++;
+
+                if (dragon.hits === dragon.size) {
+                    statusText.innerHTML = `💥 HẠ GỤC THÀNH CÔNG <b>${dragon.name.toUpperCase()}</b>!`;
+                    markDragonAsSunk(dragon.id);
+                    dragonsAlive--;
+                    if (dragonsAlive === 0) setTimeout(() => alert("🏆 CHIẾN THẮNG!"), 300);
+                }
+            } else {
+                cell.classList.add('miss');
+            }
+        }
+
+        // 🌪️ LOGIC QUÉT RADAR HỆ GIÓ (KHÔNG GÂY SÁT THƯƠNG, CHỈ LỘ VỊ TRÍ)
+        function scanRadar(centerRow, centerCol) {
+            let detected = false;
+            for (let r = centerRow - 1; r <= centerRow + 1; r++) {
+                for (let c = centerCol - 1; c <= centerCol + 1; c++) {
+                    if (r >= 0 && r < boardSize && c >= 0 && c < boardSize) {
+                        const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+                        // Nếu ô đó có rồng và chưa từng bị bắn trúng
+                        if (logicalBoard[r][c] !== null && !cell.classList.contains('hit') && !cell.classList.contains('sunk')) {
+                            cell.classList.add('radar-detected');
+                            detected = true;
+                        }
+                    }
+                }
+            }
+            statusText.innerText = detected ? "🌪️ Radar phát hiện năng lượng Rồng trong vùng quét!" : "🌪️ Vùng quét trống rỗng, không có mục tiêu.";
+            statusText.style.color = "#a29bfe";
+        }
+
+        function handleCellClick(event) {
+            const cell = event.target;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            if (gameState === 'SETUP') {
+                if (currentDragonIndex >= fleet.length) return;
+                const dragon = fleet[currentDragonIndex];
+                const targetCells = getDragonPlacementCells(row, col, dragon.size);
+
+                if (isValidPlacement(targetCells)) {
+                    targetCells.forEach(c => {
+                        logicalBoard[c.r][c.c] = dragon.id;
+                        document.querySelector(`.cell[data-row='${c.r}'][data-col='${c.c}']`).classList.add('placed');
+                    });
+                    dragon.isPlaced = true;
+                    currentDragonIndex++;
+                    updateDragonListUI();
+
+                    if (currentDragonIndex === fleet.length) {
+                        statusText.innerText = "🎉 Hạm đội đã sẵn sàng chiến đấu!";
+                        statusText.style.color = "#2ed573";
+                        btnRotate.style.display = 'none';
+                        btnStart.style.display = 'block';
+                    }
+                }
+            } 
+            else if (gameState === 'BATTLE') {
+                // KỸ NĂNG 1: ĐẠN THƯỜNG
+                if (activeSkill === 'NORMAL') {
+                    if (cell.classList.contains('hit') || cell.classList.contains('miss') || cell.classList.contains('sunk')) return;
+                    fireAtCell(row, col);
+                } 
+                // KỸ NĂNG 2: HỆ LỬA (NỔ AOE CHỮ THẬP)
+                else if (activeSkill === 'FIRE') {
+                    if (skillCharges.FIRE <= 0) return;
+                    
+                    fireAtCell(row, col);     // Tâm nổ
+                    fireAtCell(row - 1, col); // Trên
+                    fireAtCell(row + 1, col); // Dưới
+                    fireAtCell(row, col - 1); // Trái
+                    fireAtCell(row, col + 1); // Phải
+                    
+                    skillCharges.FIRE--;
+                    document.getElementById('skill-fire').disabled = true;
+                    selectSkill('NORMAL'); // Bắn xong tự động chuyển về đạn thường
+                } 
+                // KỸ NĂNG 3: HỆ GIÓ (QUÉT RADAR DIỆN RỘNG)
+                else if (activeSkill === 'WIND') {
+                    if (skillCharges.WIND <= 0) return;
+                    
+                    scanRadar(row, col);
+                    
+                    skillCharges.WIND--;
+                    document.getElementById('skill-wind').disabled = true;
+                    selectSkill('NORMAL');
+                }
+            }
+        }
+
+        function markDragonAsSunk(dragonId) {
+            document.querySelectorAll('.cell').forEach(cell => {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                if (logicalBoard[r][c] === dragonId) {
+                    cell.classList.remove('hit', 'radar-detected');
+                    cell.classList.add('sunk');
+                }
+            });
+        }
+
+        // QUẢN LÝ CHUYỂN ĐỔI KỸ NĂNG TRÊN UI
+        function selectSkill(skillType) {
+            activeSkill = skillType;
+            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('selected'));
+            
+            if (skillType === 'NORMAL') document.getElementById('skill-normal').classList.add('selected');
+            if (skillType === 'FIRE') document.getElementById('skill-fire').classList.add('selected');
+            if (skillType === 'WIND') document.getElementById('skill-wind').classList.add('selected');
+        }
+
+        btnRotate.addEventListener('click', () => {
+            isHorizontal = !isHorizontal;
+            btnRotate.innerText = `🔄 Xoay Rồng: ${isHorizontal ? 'NGANG' : 'DỌC'}`;
+        });
+
+        btnStart.addEventListener('click', () => {
+            gameState = 'BATTLE';
+            statusText.innerText = "🎯 Trận đấu bắt đầu! Hãy chọn Vũ khí và khai hỏa!";
+            statusText.style.color = "#ff4757";
+            btnStart.style.display = 'none';
+            skillPanel.style.display = 'block'; // Hiện bảng chọn kỹ năng
+            
+            document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('placed'));
+        });
+
+        document.getElementById('skill-normal').addEventListener('click', () => selectSkill('NORMAL'));
+        document.getElementById('skill-fire').addEventListener('click', () => { if(skillCharges.FIRE > 0) selectSkill('FIRE'); });
+        document.getElementById('skill-wind').addEventListener('click', () => { if(skillCharges.WIND > 0) selectSkill('WIND'); });
+
+        createBoard();
+        updateDragonListUI();
+    </script>
+</body>
+</html>
