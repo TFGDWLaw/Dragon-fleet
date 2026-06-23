@@ -3,105 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dragon Fleet: Elemental Strike</title>
+    <title>Dragon Fleet: PvP Online</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e272e;
-            color: #d2dae2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e272e; color: #d2dae2; display: flex; flex-direction: column; align-items: center; margin-top: 20px; user-select: none; }
         h1 { color: #ff9f43; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 5px;}
         
-        #game-container {
-            display: flex;
-            gap: 40px;
-            margin-top: 20px;
-            align-items: flex-start;
-        }
-
-        /* BÀN CỜ ĐƯỢC CHUYỂN THÀNH LỚP NỀN (RELATIVE) ĐỂ ĐỠ ẢNH RỒNG NỔI LÊN TRÊN */
-        #game-board {
-            position: relative; 
-            display: grid;
-            grid-template-columns: repeat(10, 40px);
-            grid-template-rows: repeat(10, 40px);
-            gap: 2px;
-            background-color: #485460;
-            padding: 5px;
-            border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-        }
-        .cell {
-            background-color: #0fbcf9;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+        /* GIAO DIỆN SẢNH CHỜ LOBBY */
+        #lobby-container { background-color: #2f3542; padding: 30px; border-radius: 8px; width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); margin-top: 50px; }
+        .lobby-title { font-size: 1.5rem; color: #0fbcf9; margin-bottom: 20px; font-weight: bold; }
+        .lobby-btn { width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px; color: white; transition: 0.2s; }
+        #btn-create-room { background-color: #f368e0; }
+        #btn-create-room:hover { background-color: #ff9ff3; }
+        #btn-join-room { background-color: #10ac84; }
+        #btn-join-room:hover { background-color: #1dd1a1; }
+        .room-code-display { font-size: 2.5rem; color: #ff9f43; letter-spacing: 5px; margin: 15px 0; font-family: monospace; }
+        .lobby-input { width: 90%; padding: 12px; font-size: 1.2rem; text-align: center; letter-spacing: 3px; border-radius: 4px; border: 2px solid #57606f; background-color: #1e272e; color: white; margin-bottom: 15px; text-transform: uppercase; }
         
+        /* GIAO DIỆN GAME (Ẩn đi lúc đầu) */
+        #game-container { display: none; gap: 40px; margin-top: 20px; align-items: flex-start; }
+        #game-board { position: relative; display: grid; grid-template-columns: repeat(10, 40px); grid-template-rows: repeat(10, 40px); gap: 2px; background-color: #485460; padding: 5px; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .cell { background-color: #0fbcf9; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
         .cell.preview-valid { background-color: #2ecc71 !important; }
         .cell.preview-invalid { background-color: #ea2027 !important; cursor: not-allowed; }
-        .cell.placed { background-color: #ffeaa7; border: 1px solid #ffb142; }
-        .cell.miss { background-color: #808e9b; cursor: not-allowed; opacity: 0.7; }
-        .cell.hit { background-color: #ff3f34; cursor: not-allowed; }
-        .cell.sunk { background-color: #ffc048; border: 2px solid #d35400; }
-        .cell.radar-detected { background-color: #a29bfe !important; border: 1px dashed #6c5ce7; }
-
-        /* ========================================= */
-        /* CLASS MỚI: QUẢN LÝ HÌNH ẢNH RỒNG (SPRITE) */
-        /* ========================================= */
-        .dragon-sprite {
-            position: absolute;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            /* Cực kỳ quan trọng: Cho phép click "xuyên" qua ảnh rồng để cờ vẫn nhận lệnh bắn */
-            pointer-events: none; 
-            transition: opacity 0.5s ease-in-out, filter 0.5s;
-            z-index: 10;
-            /* Lớp nền dự phòng nếu chưa có file ảnh thật */
-            background-color: rgba(255, 159, 67, 0.3);
-            border: 2px dashed #ff9f43;
-            border-radius: 20px;
-        }
+        .cell.placed { background-color: transparent; } /* Ô cờ trong suốt để hiện sprite */
         
-        .dragon-sprite.hidden {
-            opacity: 0; /* Tàng hình lúc đang chiến đấu */
-        }
+        /* QUẢN LÝ SPRITE RỒNG (SVG ĐƯỢC TÍCH HỢP TRỰC TIẾP TRONG JS) */
+        .dragon-sprite { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 10; transition: opacity 0.3s; }
         
-        .dragon-sprite.revealed {
-            opacity: 1; /* Hiện hình khi bị hạ gục */
-            filter: drop-shadow(0 0 15px rgba(255, 63, 52, 0.8));
-            border: none;
-            background-color: transparent;
-        }
-
         #control-panel { background-color: #2f3542; padding: 20px; border-radius: 8px; width: 280px; }
         .panel-title { font-size: 1.2rem; font-weight: bold; color: #ff9f43; margin-bottom: 15px; border-bottom: 1px solid #57606f; padding-bottom: 5px; }
-        
         .dragon-item { padding: 8px 12px; margin-bottom: 8px; background-color: #747d8c; border-radius: 4px; display: flex; justify-content: space-between; opacity: 0.5; }
         .dragon-item.active { opacity: 1; background-color: #ff9f43; color: #1e272e; font-weight: bold; }
         .dragon-item.placed { opacity: 1; background-color: #2ed573; color: white; text-decoration: line-through; }
-
-        .skill-container { display: none; margin-top: 15px; }
-        .skill-btn { width: 100%; padding: 10px; margin-bottom: 8px; border: 2px solid transparent; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left; background-color: #57606f; color: white; }
-        .skill-btn.selected { border-color: #fff200; background-color: #ffa502; color: #1e272e; }
-        .skill-btn:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-
-        button.action-btn { width: 100%; padding: 12px; background-color: #10ac84; color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button.action-btn:hover { background-color: #1dd1a1; }
-        button#btn-rotate { background-color: #5f27cd; }
-
-        #status-text { margin-top: 25px; font-size: 1.4rem; font-weight: bold; text-align: center; min-height: 35px; }
+        button.action-btn { width: 100%; padding: 12px; background-color: #5f27cd; color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        #status-text { margin-top: 25px; font-size: 1.4rem; font-weight: bold; text-align: center; min-height: 35px; text-shadow: 1px 1px 2px black;}
     </style>
 </head>
 <body>
 
-    <h1>DRAGON FLEET</h1>
-    <div id="status-text">Giai đoạn: Sắp xếp đội hình</div>
+    <h1>DRAGON FLEET: PVP ONLINE</h1>
+    <div id="status-text">Đang kết nối tới Máy chủ Đám mây...</div>
+
+    <div id="lobby-container">
+        <div class="lobby-title">SẢNH CHỜ</div>
+        
+        <div id="create-room-section">
+            <button id="btn-create-room" class="lobby-btn">TẠO PHÒNG MỚI</button>
+            <div id="waiting-info" style="display: none; margin-top: 20px;">
+                <p>Gửi mã này cho đối thủ:</p>
+                <div id="display-room-code" class="room-code-display">----</div>
+                <p style="color: #2ed573; font-weight:bold;">Đang chờ đối thủ tham gia...</p>
+            </div>
+        </div>
+
+        <hr style="border-color: #57606f; margin: 25px 0;">
+
+        <div id="join-room-section">
+            <input type="text" id="input-room-code" class="lobby-input" placeholder="Nhập mã phòng" maxlength="4">
+            <button id="btn-join-room" class="lobby-btn">VÀO PHÒNG</button>
+        </div>
+    </div>
 
     <div id="game-container">
         <div id="game-board"></div>
@@ -109,317 +71,326 @@
             <div class="panel-title">HẠM ĐỘI CỦA BẠN</div>
             <div id="dragon-list"></div>
             <button id="btn-rotate" class="action-btn">🔄 Xoay Rồng (Phím R): NGANG</button>
-            <button id="btn-start" class="action-btn" style="display: none; background-color: #ff4757;">🚀 BẮT ĐẦU CHIẾN ĐẤU</button>
-
-            <div id="skill-panel" class="skill-container">
-                <div class="panel-title" style="margin-top: 15px;">CHỌN VŨ KHÍ</div>
-                <button id="skill-normal" class="skill-btn selected">🎯 Đạn Thường (Vô hạn)</button>
-                <button id="skill-fire" class="skill-btn">🔥 Hệ Lửa: Chữ Thập (SL: 1)</button>
-                <button id="skill-wind" class="skill-btn">🌪️ Hệ Gió: Quét Radar 3x3 (SL: 1)</button>
-            </div>
+            <button id="btn-ready" class="action-btn" style="display: none; background-color: #10ac84;">✅ XẾP XONG! CHỜ ĐỐI THỦ</button>
         </div>
     </div>
 
-    <script>
-        const boardSize = 10;
-        const gridElement = document.getElementById('game-board');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // 1. CHÌA KHÓA CẤU HÌNH FIREBASE - ĐÃ ĐƯỢC SỬA CHÍNH XÁC 100%
+        const firebaseConfig = {
+            apiKey: "AIzaSyACUVNGTByzfY_DwpavwpB7EVbKgbFDfxY",
+            authDomain: "dragon-battleship.firebaseapp.com",
+            databaseURL: "https://dragon-battleship-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dragon-battleship",
+            storageBucket: "dragon-battleship.firebasestorage.app",
+            messagingSenderId: "147470295813",
+            appId: "1:147470295813:web:d02e73501b5b9705794d6c"
+        };
+
+        // 2. KHỞI CHẠY FIREBASE
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Các biến Multiplayer toàn cục
+        let myPlayerId = null; 
+        let currentRoomCode = null;
+
+        // UI Elements
         const statusText = document.getElementById('status-text');
-        const dragonListElement = document.getElementById('dragon-list');
-        const btnRotate = document.getElementById('btn-rotate');
-        const btnStart = document.getElementById('btn-start');
-        const skillPanel = document.getElementById('skill-panel');
-
-        let gameState = 'SETUP'; 
-        let isHorizontal = true; 
-        let currentDragonIndex = 0; 
-        let activeSkill = 'NORMAL'; 
-        let skillCharges = { FIRE: 1, WIND: 1 };
-        let currentHoverRow = null;
-        let currentHoverCol = null;
-
-        // Bổ sung thuộc tính file ảnh cho từng loại rồng
-        let fleet = [
-            { id: "divine", name: "Divine Dragon", size: 5, hits: 0, isPlaced: false, imgFile: "divine.png" },
-            { id: "supreme", name: "Supreme Dragon", size: 4, hits: 0, isPlaced: false, imgFile: "supreme.png" },
-            { id: "epic_a", name: "Epic Dragon Alpha", size: 3, hits: 0, isPlaced: false, imgFile: "epic_a.png" },
-            { id: "epic_b", name: "Epic Dragon Beta", size: 3, hits: 0, isPlaced: false, imgFile: "epic_b.png" },
-            { id: "rare", name: "Rare Dragon", size: 2, hits: 0, isPlaced: false, imgFile: "rare.png" }
-        ];
-        let dragonsAlive = fleet.length;
-        let logicalBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
-
-        function updateDragonListUI() {
-            dragonListElement.innerHTML = '';
-            fleet.forEach((dragon, index) => {
-                const item = document.createElement('div');
-                item.classList.add('dragon-item');
-                item.innerHTML = `<span>${dragon.name}</span> <span>${dragon.size} ô</span>`;
-                if (dragon.isPlaced) item.classList.add('placed');
-                else if (gameState === 'SETUP' && index === currentDragonIndex) item.classList.add('active');
-                dragonListElement.appendChild(item);
-            });
-        }
-
-        function createBoard() {
-            gridElement.innerHTML = '';
-            for (let r = 0; r < boardSize; r++) {
-                for (let c = 0; c < boardSize; c++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
-                    cell.addEventListener('mouseenter', handleMouseEnter);
-                    cell.addEventListener('mouseleave', handleMouseLeave);
-                    cell.addEventListener('click', handleCellClick);
-                    gridElement.appendChild(cell);
-                }
-            }
-        }
-
-        function getDragonPlacementCells(startRow, startCol, size) {
-            let cells = [];
-            for (let i = 0; i < size; i++) {
-                let r = isHorizontal ? startRow : startRow + i;
-                let c = isHorizontal ? startCol + i : startCol;
-                cells.push({ r, c });
-            }
-            return cells;
-        }
-
-        function isValidPlacement(cells) {
-            for (let cell of cells) {
-                if (cell.r >= boardSize || cell.c >= boardSize) return false;
-                if (logicalBoard[cell.r][cell.c] !== null) return false;
-            }
-            return true;
-        }
-
-        function clearPreview() {
-            document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('preview-valid', 'preview-invalid'));
-        }
-
-        function drawPreview() {
-            if (gameState !== 'SETUP' || currentDragonIndex >= fleet.length || currentHoverRow === null) return;
-            clearPreview(); 
-            const targetCells = getDragonPlacementCells(currentHoverRow, currentHoverCol, fleet[currentDragonIndex].size);
-            const valid = isValidPlacement(targetCells);
-
-            targetCells.forEach(cell => {
-                if (cell.r < boardSize && cell.c < boardSize) {
-                    const domCell = document.querySelector(`.cell[data-row='${cell.r}'][data-col='${cell.c}']`);
-                    if (domCell) domCell.classList.add(valid ? 'preview-valid' : 'preview-invalid');
-                }
-            });
-        }
-
-        function handleMouseEnter(event) {
-            currentHoverRow = parseInt(event.target.dataset.row);
-            currentHoverCol = parseInt(event.target.dataset.col);
-            drawPreview();
-        }
-
-        function handleMouseLeave() {
-            currentHoverRow = null;
-            currentHoverCol = null;
-            clearPreview();
-        }
+        const lobbyContainer = document.getElementById('lobby-container');
+        const gameContainer = document.getElementById('game-container');
+        
+        statusText.innerText = "Sẵn sàng kết nối! Hãy Tạo phòng hoặc Vào phòng.";
 
         // ==========================================
-        // THUẬT TOÁN DỰNG HÌNH ẢNH RỒNG LÊN BÀN CỜ
+        // LOGIC SẢNH CHỜ (LOBBY ONLINE)
         // ==========================================
-        function renderDragonSprite(dragon, row, col, isHoriz) {
-            const sprite = document.createElement('div');
-            sprite.classList.add('dragon-sprite');
-            sprite.id = 'sprite-' + dragon.id; // Để sau này dễ dàng gọi hồn nó lên
+        
+        // --- XỬ LÝ TẠO PHÒNG MỚI (CHỦ PHÒNG) ---
+        document.getElementById('btn-create-room').addEventListener('click', async () => {
+            // Tạo mã phòng ngẫu nhiên 4 ký tự (ví dụ: A8X1)
+            currentRoomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+            myPlayerId = 'player1'; // Chủ phòng luôn là P1
 
-            // Tính độ dài bằng Pixel (40px mỗi ô + 2px khoảng cách)
-            const lengthPx = dragon.size * 40 + (dragon.size - 1) * 2;
+            const roomRef = ref(db, 'rooms/' + currentRoomCode);
             
-            // Mặc định tạo khung ảnh nằm NGANG
-            sprite.style.width = lengthPx + 'px';
-            sprite.style.height = '40px';
+            // Khởi tạo dữ liệu phòng trên Đám mây
+            try {
+                await set(roomRef, {
+                    status: 'waiting', // Trạng thái: đang chờ P2 vào
+                    player1: { ready: false, board: null }
+                });
 
-            // Tính tọa độ điểm neo trên cùng bên trái của ô đầu tiên
-            const topPx = 5 + row * 42;  // 5px padding của board + số dòng * kích thước ô
-            const leftPx = 5 + col * 42;
+                // Cập nhật giao diện
+                document.getElementById('create-room-section').style.display = 'block';
+                document.getElementById('btn-create-room').style.display = 'none';
+                document.getElementById('join-room-section').style.display = 'none';
+                document.getElementById('waiting-info').style.display = 'block';
+                document.getElementById('display-room-code').innerText = currentRoomCode;
+                statusText.innerText = "Đã tạo phòng! Gửi mã cho đối thủ.";
+                statusText.style.color = "#f368e0";
+
+                // Bật radar lắng nghe sự thay đổi của phòng (chờ P2)
+                listenToRoomUpdates(currentRoomCode);
+            } catch (error) {
+                console.error("Lỗi tạo phòng:", error);
+                alert("Không thể kết nối Server để tạo phòng. Hãy kiểm tra Security Rules.");
+            }
+        });
+
+        // --- XỬ LÝ VÀO PHÒNG (ĐỐI THỦ) ---
+        document.getElementById('btn-join-room').addEventListener('click', async () => {
+            const inputCode = document.getElementById('input-room-code').value.toUpperCase();
+            if (inputCode.length !== 4) { alert("Mã phòng phải có 4 ký tự!"); return; }
+
+            const roomRef = ref(db, 'rooms/' + inputCode);
             
-            sprite.style.top = topPx + 'px';
-            sprite.style.left = leftPx + 'px';
+            // Kiểm tra sự tồn tại của phòng
+            try {
+                const snapshot = await get(roomRef);
 
-            // Nếu người chơi đặt dọc, ta dùng CSS lật dọc khung ảnh 90 độ tại đúng tâm ô đầu tiên
-            if (!isHoriz) {
-                sprite.style.transformOrigin = '20px 20px'; // 20px là nửa ô cờ
-                sprite.style.transform = 'rotate(90deg)';
-            }
+                if (snapshot.exists() && snapshot.val().status === 'waiting') {
+                    currentRoomCode = inputCode;
+                    myPlayerId = 'player2'; // Người vào là P2
 
-            // Gắn link hình ảnh từ thư mục assets
-            sprite.style.backgroundImage = `url('assets/${dragon.imgFile}')`;
-
-            // Ném ảnh vào vùng không gian chung của bàn cờ
-            gridElement.appendChild(sprite);
-        }
-        // ==========================================
-
-        function fireAtCell(row, col) {
-            if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) return;
-            const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
-            if (!cell || cell.classList.contains('hit') || cell.classList.contains('miss') || cell.classList.contains('sunk')) return;
-
-            const targetId = logicalBoard[row][col];
-            if (targetId !== null) {
-                cell.classList.add('hit');
-                const dragon = fleet.find(d => d.id === targetId);
-                dragon.hits++;
-
-                if (dragon.hits === dragon.size) {
-                    statusText.innerHTML = `💥 HẠ GỤC THÀNH CÔNG <b>${dragon.name.toUpperCase()}</b>!`;
-                    markDragonAsSunk(dragon.id);
-                    dragonsAlive--;
-                    if (dragonsAlive === 0) setTimeout(() => alert("🏆 CHIẾN THẮNG! BẠN ĐÃ LÀM CHỦ BẦU TRỜI!"), 500);
-                }
-            } else {
-                cell.classList.add('miss');
-            }
-        }
-
-        function scanRadar(centerRow, centerCol) {
-            let detected = false;
-            for (let r = centerRow - 1; r <= centerRow + 1; r++) {
-                for (let c = centerCol - 1; c <= centerCol + 1; c++) {
-                    if (r >= 0 && r < boardSize && c >= 0 && c < boardSize) {
-                        const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
-                        if (logicalBoard[r][c] !== null && !cell.classList.contains('hit') && !cell.classList.contains('sunk')) {
-                            cell.classList.add('radar-detected');
-                            detected = true;
-                        }
-                    }
-                }
-            }
-            statusText.innerText = detected ? "🌪️ Radar phát hiện năng lượng Rồng trong vùng quét!" : "🌪️ Vùng quét trống rỗng.";
-            statusText.style.color = "#a29bfe";
-        }
-
-        function handleCellClick(event) {
-            const cell = event.target;
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-
-            if (gameState === 'SETUP') {
-                if (currentDragonIndex >= fleet.length) return;
-                const dragon = fleet[currentDragonIndex];
-                const targetCells = getDragonPlacementCells(row, col, dragon.size);
-
-                if (isValidPlacement(targetCells)) {
-                    targetCells.forEach(c => {
-                        logicalBoard[c.r][c.c] = dragon.id;
-                        // Vẫn giữ đánh dấu placed để test code, nhưng ảnh đè lên trên sẽ đẹp hơn
-                        document.querySelector(`.cell[data-row='${c.r}'][data-col='${c.c}']`).classList.add('placed');
+                    // Cập nhật lên Server: P2 đã vào, đổi status phòng sang SETUP
+                    await update(roomRef, {
+                        status: 'setup', 
+                        player2: { ready: false, board: null }
                     });
+
+                    // Bật radar lắng nghe sự thay đổi của phòng
+                    listenToRoomUpdates(currentRoomCode);
+                } else {
+                    alert("Mã phòng không tồn tại hoặc phòng đã bắt đầu chơi!");
+                }
+            } catch (error) {
+                console.error("Lỗi vào phòng:", error);
+                alert("Lỗi kết nối Server.");
+            }
+        });
+
+        // --- HÀM RADAR THEO DÕI SỰ THAY ĐỔI CỦA PHÒNG TRÊN MÂY (REALTIME) ---
+        function listenToRoomUpdates(roomCode) {
+            const roomRef = ref(db, 'rooms/' + roomCode);
+            
+            // onValue: Cứ mỗi khi Server có thay đổi, hàm này sẽ tự động chạy
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                // CHUYỂN CẢ 2 SANG GIAO DIỆN GAME KHI KẾT NỐI THÀNH CÔNG
+                if (data.status === 'setup' && lobbyContainer.style.display !== 'none') {
+                    lobbyContainer.style.display = 'none';
+                    gameContainer.style.display = 'flex';
+                    statusText.innerText = "💥 ĐỐI THỦ ĐÃ KẾT NỐI! Bắt đầu xếp Rồng của bạn!";
+                    statusText.style.color = "#2ed573";
                     
-                    // 🟢 KÍCH HOẠT VẼ ẢNH SAU KHI ĐẶT XUỐNG BÀN CỜ
-                    renderDragonSprite(dragon, row, col, isHorizontal);
+                    // Khởi chạy Core Game Engine
+                    initGameEngine(); 
+                }
+            });
+        }
 
-                    dragon.isPlaced = true;
-                    currentDragonIndex++;
-                    updateDragonListUI();
-                    drawPreview(); 
+        // ==========================================
+        // LOGIC CORE GAME ENGINE (BÀN CỜ & ĐẶT RỒNG)
+        // ==========================================
+        function initGameEngine() {
+            const boardSize = 10;
+            const gridElement = document.getElementById('game-board');
+            const dragonListElement = document.getElementById('dragon-list');
+            const btnRotate = document.getElementById('btn-rotate');
+            const btnReady = document.getElementById('btn-ready');
 
-                    if (currentDragonIndex === fleet.length) {
-                        statusText.innerText = "🎉 Hạm đội đã sẵn sàng chiến đấu!";
-                        statusText.style.color = "#2ed573";
-                        btnRotate.style.display = 'none';
-                        btnStart.style.display = 'block';
-                        clearPreview();
+            let isHorizontal = true; 
+            let currentDragonIndex = 0; 
+            let currentHoverRow = null, currentHoverCol = null;
+
+            // --- ĐỊNH NGHĨA HẠM ĐỘI & ASSETS SVG TRỰC TIẾP ---
+            const divineSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Crect x='5' y='5' width='190' height='30' rx='15' fill='%23ffeaa7' stroke='%23ff9f43' stroke-width='3'/%3E%3Ccircle cx='175' cy='20' r='10' fill='%23ff9f43'/%3E%3Cpath d='M30 10 L40 5 L35 15' fill='%23ff9f43'/%3E%3C/svg%3E";
+            const supremeSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40'%3E%3Crect x='5' y='5' width='150' height='30' rx='10' fill='%23a29bfe' stroke='%236c5ce7' stroke-width='3'/%3E%3Ccircle cx='140' cy='20' r='9' fill='%236c5ce7'/%3E%3Cpath d='M20 8 L25 2 L30 8 L25 14 Z' fill='%23fff'/%3E%3C/svg%3E";
+            const epicFireSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Crect x='5' y='5' width='110' height='30' rx='8' fill='%23ff7675' stroke='%23d63031' stroke-width='3'/%3E%3Cpath d='M95 10 C 105 0, 115 20, 105 30' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E";
+            const epicWaterSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Crect x='5' y='5' width='110' height='30' rx='8' fill='%2374b9ff' stroke='%230984e3' stroke-width='3'/%3E%3Ccircle cx='100' cy='20' r='6' fill='%23fff' opacity='0.7'/%3E%3C/svg%3E";
+            const rareSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 40'%3E%3Crect x='5' y='5' width='70' height='30' rx='5' fill='%2355efc4' stroke='%2300b894' stroke-width='3'/%3E%3Cpath d='M10 10 L 20 20 L 10 30' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E";
+
+            let fleet = [
+                { id: "divine", name: "Divine Dragon", size: 5, isPlaced: false, svg: divineSvg },
+                { id: "supreme", name: "Supreme Dragon", size: 4, isPlaced: false, svg: supremeSvg },
+                { id: "epic_a", name: "Epic Dragon Alpha", size: 3, isPlaced: false, svg: epicFireSvg },
+                { id: "epic_b", name: "Epic Dragon Beta", size: 3, isPlaced: false, svg: epicWaterSvg },
+                { id: "rare", name: "Rare Dragon", size: 2, isPlaced: false, svg: rareSvg }
+            ];
+
+            let logicalBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+
+            // --- VẼ UI DANH SÁCH RỒNG BÊN PHẢI ---
+            function updateUI() {
+                dragonListElement.innerHTML = '';
+                fleet.forEach((d, i) => {
+                    const item = document.createElement('div');
+                    item.classList.add('dragon-item');
+                    item.innerHTML = `<span>${d.name}</span> <span>${d.size} ô</span>`;
+                    if (d.isPlaced) item.classList.add('placed');
+                    else if (i === currentDragonIndex) item.classList.add('active');
+                    dragonListElement.appendChild(item);
+                });
+            }
+
+            // --- KHỞI TẠO BÀN CỜ 10x10 ---
+            function drawBoard() {
+                gridElement.innerHTML = '';
+                for (let r = 0; r < boardSize; r++) {
+                    for (let c = 0; c < boardSize; c++) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('cell');
+                        cell.dataset.row = r; cell.dataset.col = c;
+                        // Gắn sự kiện chuột
+                        cell.addEventListener('mouseenter', handleEnter);
+                        cell.addEventListener('mouseleave', handleLeave);
+                        cell.addEventListener('click', handleClick);
+                        gridElement.appendChild(cell);
                     }
                 }
-            } 
-            else if (gameState === 'BATTLE') {
-                if (activeSkill === 'NORMAL') {
-                    if (cell.classList.contains('hit') || cell.classList.contains('miss') || cell.classList.contains('sunk')) return;
-                    fireAtCell(row, col);
-                } 
-                else if (activeSkill === 'FIRE') {
-                    if (skillCharges.FIRE <= 0) return;
-                    fireAtCell(row, col);
-                    fireAtCell(row - 1, col);
-                    fireAtCell(row + 1, col);
-                    fireAtCell(row, col - 1);
-                    fireAtCell(row, col + 1);
-                    skillCharges.FIRE--;
-                    document.getElementById('skill-fire').disabled = true;
-                    selectSkill('NORMAL');
-                } 
-                else if (activeSkill === 'WIND') {
-                    if (skillCharges.WIND <= 0) return;
-                    scanRadar(row, col);
-                    skillCharges.WIND--;
-                    document.getElementById('skill-wind').disabled = true;
-                    selectSkill('NORMAL');
+            }
+
+            // --- TÍNH TOÁN CÁC Ô SẼ CHIẾM DỤNG ---
+            function getCells(r, c, size) {
+                let cells = [];
+                for(let i=0; i<size; i++) {
+                    cells.push({ 
+                        r: isHorizontal ? r : r+i, 
+                        c: isHorizontal ? c+i : c 
+                    });
+                }
+                return cells;
+            }
+
+            // --- KIỂM TRA VỊ TRÍ CÓ HỢP LỆ (KHÔNG ĐỀ NHAU, KHÔNG TRÀN VIỀN) ---
+            function isValid(cells) {
+                for (let cell of cells) {
+                    if (cell.r >= boardSize || cell.c >= boardSize || logicalBoard[cell.r][cell.c] !== null) {
+                        return false;
+                    }
+                } return true;
+            }
+
+            // --- XÓA MÀU PREVIEW CŨ ---
+            function clearPreview() { 
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('preview-valid', 'preview-invalid')); 
+            }
+
+            // --- VẼ MÀU PREVIEW XEM TRƯỚC (XANH/ĐỎ) ---
+            function drawPreview() {
+                if(currentDragonIndex >= fleet.length || currentHoverRow === null) return;
+                clearPreview();
+                const dragon = fleet[currentDragonIndex];
+                const cells = getCells(currentHoverRow, currentHoverCol, dragon.size);
+                const valid = isValid(cells);
+                cells.forEach(cell => {
+                    if (cell.r < boardSize && cell.c < boardSize) {
+                        const domCell = document.querySelector(`.cell[data-row='${cell.r}'][data-col='${cell.c}']`);
+                        if (domCell) domCell.classList.add(valid ? 'preview-valid' : 'preview-invalid');
+                    }
+                });
+            }
+
+            function handleEnter(e) { currentHoverRow = parseInt(e.target.dataset.row); currentHoverCol = parseInt(e.target.dataset.col); drawPreview(); }
+            function handleLeave() { currentHoverRow = null; currentHoverCol = null; clearPreview(); }
+
+            // --- DỰNG SPRITE RỒNG SVG LÊN BÀN CỜ SAU KHI ĐẶT ---
+            function renderSprite(dragon, row, col, isHoriz) {
+                const sprite = document.createElement('div');
+                sprite.classList.add('dragon-sprite');
+                // Tính độ dài bằng Pixel (40px mỗi ô + 2px khoảng cách)
+                const lengthPx = dragon.size * 40 + (dragon.size - 1) * 2;
+                
+                sprite.style.width = lengthPx + 'px';
+                sprite.style.height = '40px';
+                // Tọa độ điểm neo (5px padding của board)
+                sprite.style.top = (5 + row * 42) + 'px';
+                sprite.style.left = (5 + col * 42) + 'px';
+
+                // Nếu xoay dọc: dùng transform lật 90 độ tại tâm ô đầu tiên
+                if (!isHoriz) { 
+                    sprite.style.transformOrigin = '20px 20px'; // Tâm ô 40x40
+                    sprite.style.transform = 'rotate(90deg)'; 
+                }
+                // Gắn assets SVG trực tiếp
+                sprite.style.backgroundImage = `url("${dragon.svg}")`;
+                gridElement.appendChild(sprite);
+            }
+
+            // --- XỬ LÝ CLICK ĐỂ ĐẶT RỒNG XUỐNG ---
+            function handleClick(e) {
+                if (currentDragonIndex >= fleet.length) return;
+                const r = parseInt(e.target.dataset.row), c = parseInt(e.target.dataset.col);
+                const dragon = fleet[currentDragonIndex];
+                const cells = getCells(r, c, dragon.size);
+
+                if (isValid(cells)) {
+                    cells.forEach(cell => { 
+                        logicalBoard[cell.r][cell.c] = dragon.id; 
+                        // Ô cờ biến thành trong suốt, sprite hiện lên trên
+                        document.querySelector(`.cell[data-row='${cell.r}'][data-col='${cell.c}']`).classList.add('placed'); 
+                    });
+                    // Vẽ sprite
+                    renderSprite(dragon, r, c, isHorizontal);
+                    dragon.isPlaced = true; 
+                    currentDragonIndex++; 
+                    updateUI(); 
+                    drawPreview();
+
+                    // Nếu đặt xong con cuối cùng
+                    if (currentDragonIndex === fleet.length) {
+                        btnRotate.style.display = 'none';
+                        btnReady.style.display = 'block'; // Hiện nút báo xếp xong
+                        clearPreview();
+                        statusText.innerText = "Xếp xong! Hãy bấm nút Sẵn sàng màu xanh lá.";
+                    }
                 }
             }
-        }
 
-        function markDragonAsSunk(dragonId) {
-            // Đổi màu vàng cho các ô
-            document.querySelectorAll('.cell').forEach(cell => {
-                const r = parseInt(cell.dataset.row);
-                const c = parseInt(cell.dataset.col);
-                if (logicalBoard[r][c] === dragonId) {
-                    cell.classList.remove('hit', 'radar-detected');
-                    cell.classList.add('sunk');
-                }
-            });
-
-            // 🟢 TÌM VÀ HIỆN HÌNH ẢNH XÁC RỒNG TRỒI LÊN TỪ LÀN SƯƠNG MÙ
-            const deadSprite = document.getElementById('sprite-' + dragonId);
-            if (deadSprite) {
-                deadSprite.classList.remove('hidden');
-                deadSprite.classList.add('revealed');
-            }
-        }
-
-        function selectSkill(skillType) {
-            activeSkill = skillType;
-            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('selected'));
-            if (skillType === 'NORMAL') document.getElementById('skill-normal').classList.add('selected');
-            if (skillType === 'FIRE') document.getElementById('skill-fire').classList.add('selected');
-            if (skillType === 'WIND') document.getElementById('skill-wind').classList.add('selected');
-        }
-
-        btnRotate.addEventListener('click', () => {
-            isHorizontal = !isHorizontal;
-            btnRotate.innerText = `🔄 Xoay Rồng (Phím R): ${isHorizontal ? 'NGANG' : 'DỌC'}`;
-            drawPreview();
-        });
-
-        document.addEventListener('keydown', (event) => {
-            if (gameState === 'SETUP' && (event.key === 'r' || event.key === 'R')) {
-                btnRotate.click();
-            }
-        });
-
-        btnStart.addEventListener('click', () => {
-            gameState = 'BATTLE';
-            statusText.innerText = "🎯 Trận đấu bắt đầu! Kẻ thù đã lẩn trốn vào sương mù!";
-            statusText.style.color = "#ff4757";
-            btnStart.style.display = 'none';
-            skillPanel.style.display = 'block'; 
+            // Nút: XOAY RỒNG
+            btnRotate.addEventListener('click', () => { isHorizontal = !isHorizontal; btnRotate.innerText = `🔄 Xoay Rồng (Phím R): ${isHorizontal ? 'NGANG' : 'DỌC'}`; drawPreview(); });
+            // Phím tắt 'R'
+            document.addEventListener('keydown', (e) => { if (gameState === 'SETUP' && e.key.toLowerCase() === 'r') btnRotate.click(); });
             
-            // Xóa dấu vết các ô màu vàng
-            document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('placed'));
-
-            // 🟢 CHO TOÀN BỘ ẢNH RỒNG TÀNG HÌNH
-            document.querySelectorAll('.dragon-sprite').forEach(sprite => {
-                sprite.classList.add('hidden');
+            // --- NÚT BẤM KHI XẾP XONG: GỬI LÊN SERVER ĐÁM MÂY! ---
+            btnReady.addEventListener('click', async () => {
+                btnReady.innerText = "✅ ĐANG CHỜ ĐỐI THỦ XẾP...";
+                btnReady.disabled = true;
+                btnReady.style.backgroundColor = "#57606f"; // Đổi màu xám
+                statusText.innerText = "Hệ thống đã ghi nhận đội hình của bạn. Chờ đối thủ...";
+                
+                // Cập nhật mảng bàn cờ và trạng thái Sẵn sàng của mình lên Server
+                const updateData = {};
+                updateData[`${myPlayerId}/ready`] = true;
+                updateData[`${myPlayerId}/board`] = logicalBoard; 
+                
+                try {
+                    await update(ref(db, 'rooms/' + currentRoomCode), updateData);
+                    // Lắng nghe xem đối thủ có Sẵn sàng chưa để vào TRẬN ĐẤU
+                    listenForBattleStart();
+                } catch (e) { console.error("Lỗi gửi dữ liệu xếp quân:", e); }
             });
-        });
 
-        document.getElementById('skill-normal').addEventListener('click', () => selectSkill('NORMAL'));
-        document.getElementById('skill-fire').addEventListener('click', () => { if(skillCharges.FIRE > 0) selectSkill('FIRE'); });
-        document.getElementById('skill-wind').addEventListener('click', () => { if(skillCharges.WIND > 0) selectSkill('WIND'); });
+            // Lắng nghe xem cả 2 đã Sẵn sàng chưa
+            function listenForBattleStart() {
+                onValue(ref(db, 'rooms/' + currentRoomCode), (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && data.player1.ready && data.player2.ready) {
+                        statusText.innerText = "🚀 CẢ HAI ĐÃ SẴN SÀNG! Trận chiến bắt đầu!";
+                        statusText.style.color = "#ff4757";
+                        // Chuyển sang Giai đoạn Bắn nhau PvP ở bản cập nhật tiếp theo
+                    }
+                });
+            }
 
-        createBoard();
-        updateDragonListUI();
+            drawBoard(); updateUI();
+        }
     </script>
 </body>
 </html>
