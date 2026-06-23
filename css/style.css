@@ -1,0 +1,79 @@
+/* =========================================
+   1. CÀI ĐẶT CHUNG (TYPOGRAPHY & BỐ CỤC)
+   ========================================= */
+body { font-family: 'Segoe UI', sans-serif; background-color: #1e272e; color: #d2dae2; display: flex; flex-direction: column; align-items: center; margin-top: 20px; user-select: none; }
+h1 { color: #ff9f43; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 5px;}
+#status-text { margin-top: 25px; font-size: 1.4rem; font-weight: bold; text-align: center; min-height: 35px; text-shadow: 1px 1px 2px black;}
+.turn-highlight { padding: 5px 15px; background-color: #ff4757; border-radius: 20px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
+
+/* =========================================
+   2. GIAO DIỆN SẢNH CHỜ (LOBBY)
+   ========================================= */
+#lobby-container { background-color: #2f3542; padding: 30px; border-radius: 8px; width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); margin-top: 50px; }
+.lobby-title { font-size: 1.5rem; color: #0fbcf9; margin-bottom: 20px; font-weight: bold; }
+.lobby-btn { width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px; color: white; transition: 0.2s; }
+#btn-create-room { background-color: #f368e0; }
+#btn-create-room:hover { background-color: #ff9ff3; }
+#btn-join-room { background-color: #10ac84; }
+#btn-join-room:hover { background-color: #1dd1a1; }
+.room-code-display { font-size: 2.5rem; color: #ff9f43; letter-spacing: 5px; margin: 15px 0; font-family: monospace; }
+.lobby-input { width: 90%; padding: 12px; font-size: 1.2rem; text-align: center; letter-spacing: 3px; border-radius: 4px; border: 2px solid #57606f; background-color: #1e272e; color: white; margin-bottom: 15px; text-transform: uppercase; }
+
+/* =========================================
+   3. BỐ CỤC MÀN HÌNH CHƠI GAME
+   ========================================= */
+#game-container { display: none; gap: 40px; margin-top: 20px; align-items: flex-start; }
+.board-wrapper { display: flex; flex-direction: column; align-items: center; }
+.panel-title { font-size: 1.2rem; font-weight: bold; color: #ff9f43; margin-bottom: 15px; border-bottom: 1px solid #57606f; padding-bottom: 5px; width: 100%; text-align: center;}
+
+/* --- Bàn cờ bên trái (Của Bạn) --- */
+#game-board { position: relative; display: grid; grid-template-columns: repeat(10, 40px); grid-template-rows: repeat(10, 40px); gap: 2px; background-color: #485460; padding: 5px; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+.cell { background-color: #0fbcf9; border-radius: 4px; transition: all 0.15s; position: relative; }
+.cell.setup-mode { cursor: pointer; }
+.cell.preview-valid { background-color: #2ecc71 !important; }
+.cell.preview-invalid { background-color: #ea2027 !important; cursor: not-allowed; }
+.cell.placed { background-color: transparent; }
+
+/* Hiệu ứng bị đối thủ bắn trúng/trượt trên sân mình */
+.cell.hit { background-color: #ff4757 !important; position: relative; }
+.cell.hit::after { content: '💥'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; z-index: 20; pointer-events: none;}
+.cell.miss { background-color: #dfe4ea !important; opacity: 0.6; pointer-events: none; }
+.cell.miss::after { content: '💦'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 15px; opacity: 0.7;}
+
+/* --- Hình ảnh Rồng --- */
+.dragon-sprite { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 10; transition: opacity 0.3s; }
+
+/* --- Bàn cờ Radar bên phải (Tấn công) --- */
+#radar-wrapper { width: 440px; }
+#radar-board { display: grid; grid-template-columns: repeat(10, 40px); grid-template-rows: repeat(10, 40px); gap: 2px; background-color: #2f3542; padding: 5px; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); border: 2px solid #ff4757;}
+.radar-cell { background-color: #747d8c; border-radius: 4px; cursor: crosshair; transition: 0.2s; position: relative; overflow: hidden; }
+.radar-cell:not(.hit):not(.miss):hover { background-color: #a4b0be; }
+
+/* 🔥 Hiệu ứng Lửa cháy khi mình bắn Trúng */
+.radar-cell.hit { background-color: #3e0a0a !important; cursor: not-allowed; }
+.radar-cell.hit::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, rgba(255,100,50,1) 0%, rgba(255,20,10,0.5) 40%, rgba(255,0,0,0) 70%); animation: fireFlame 0.8s infinite alternate; }
+.radar-cell.hit::after { content: '🔥'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; z-index: 20; animation: fireSmoke 1s infinite alternate; pointer-events: none;}
+
+/* 💦 Hiệu ứng Phao nổi khi mình bắn Trượt */
+.radar-cell.miss { background-color: #dfe4ea !important; opacity: 0.6; cursor: not-allowed; }
+.radar-cell.miss::after { content: '🍥'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; animation: splash 1s infinite alternate; pointer-events: none; color: #ff6347;}
+
+/* Animation Keyframes */
+@keyframes fireFlame { from { opacity: 0.8; transform: scale(1); } to { opacity: 1; transform: scale(1.1); } }
+@keyframes fireSmoke { from { opacity: 0.9; transform: translate(-50%, -50%) scale(1); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+@keyframes splash { from { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } to { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } }
+
+/* =========================================
+   4. BẢNG ĐIỀU KHIỂN & KỸ NĂNG (GIỮA)
+   ========================================= */
+#control-panel { background-color: #2f3542; padding: 20px; border-radius: 8px; width: 280px; }
+.dragon-item { padding: 8px 12px; margin-bottom: 8px; background-color: #747d8c; border-radius: 4px; display: flex; justify-content: space-between; opacity: 0.5; }
+.dragon-item.active { opacity: 1; background-color: #ff9f43; color: #1e272e; font-weight: bold; }
+.dragon-item.placed { opacity: 1; background-color: #2ed573; color: white; text-decoration: line-through; }
+button.action-btn { width: 100%; padding: 12px; background-color: #5f27cd; color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+.skill-container { display: none; margin-top: 15px; width: 280px;}
+.skill-btn { width: 100%; padding: 10px; margin-bottom: 8px; border: 2px solid transparent; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left; background-color: #57606f; color: white; font-size: 0.9rem; }
+.skill-btn.selected { border-color: #fff200; background-color: #ffa502; color: #1e272e; }
+.skill-btn:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
